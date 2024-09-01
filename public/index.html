@@ -71,7 +71,12 @@
     <div id="debug-info"></div>
 
     <script>
+        let isScanning = true;
+    
         function onScanSuccess(decodedText, decodedResult) {
+            if (!isScanning) return;
+    
+            isScanning = false; // Deshabilitar escaneo adicional
             let estudianteData;
             try {
                 estudianteData = JSON.parse(decodedText);
@@ -84,6 +89,7 @@
             } catch (error) {
                 console.error('Error al parsear JSON:', error);
                 showError('El código QR no contiene datos de estudiante válidos.');
+                isScanning = true; // Rehabilitar escaneo en caso de error
                 return;
             }
             
@@ -98,7 +104,6 @@
             })
             .then(response => {
                 if (response.type === 'opaque') {
-                    // No podemos acceder a la respuesta debido a CORS, asumimos éxito
                     showSuccess();
                 } else {
                     return response.text();
@@ -123,9 +128,14 @@
                 console.error('Error:', error);
                 document.getElementById('debug-info').textContent = `Error: ${error.message}`;
                 showError('Error de red al intentar registrar el estudiante. Por favor, verifica tu conexión e inténtalo de nuevo.');
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    isScanning = true; // Rehabilitar escaneo después de un tiempo
+                }, 5000); // 5 segundos de espera antes de permitir otro escaneo
             });
         }
-
+    
         function showSuccess() {
             document.getElementById('success-message').style.display = 'block';
             document.getElementById('error-message').style.display = 'none';
@@ -133,7 +143,7 @@
                 document.getElementById('success-message').style.display = 'none';
             }, 3000);
         }
-
+    
         function showError(message) {
             const errorElement = document.getElementById('error-message');
             errorElement.textContent = message;
@@ -143,11 +153,11 @@
                 errorElement.style.display = 'none';
             }, 5000);
         }
-
+    
         function onScanFailure(error) {
             console.warn(`Escaneo fallido: ${error}`);
         }
-
+    
         let html5QrcodeScanner = new Html5QrcodeScanner(
             "qr-reader",
             { fps: 10, qrbox: 200 }
